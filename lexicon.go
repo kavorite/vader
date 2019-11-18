@@ -5,16 +5,16 @@ import "strings"
 type Lexicon map[string]float64
 
 func (L Lexicon) Has(t string) bool {
-	_, ok := L[strings.ToLower(t)]
-	return ok
+    _, ok := L[strings.ToLower(t)]
+    return ok
 }
 
 func (L Lexicon) Valence(t string) float64 {
-	if L.Has(t) {
-		return L[t]
-	} else {
-		return 0
-	}
+    if L.Has(t) {
+        return L[t]
+    } else {
+        return 0
+    }
 }
 
 var lexicon = Lexicon {
