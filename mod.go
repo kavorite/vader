@@ -66,15 +66,14 @@ var negations = Bag(
 )
 
 var positives = Bag(
-	"absolutely", "amazingly", "awfully", "completely", "considerably",
-	"decidedly", "deeply", "effing", "enormously", "entirely",
-	"especially", "exceptionally", "extremely", "fabulously", "flipping",
-	"flippin", "fricking", "frickin", "frigging", "friggin", "fully",
-	"fucking", "greatly", "hella", "highly", "hugely", "incredibly",
-	"intensely", "majorly", "more", "most", "particularly", "purely",
-	"quite", "really", "remarkably", "so", "substantially", "thoroughly",
-	"totally", "tremendously", "uber", "unbelievably", "unusually",
-	"utterly", "very",
+    "absolutely", "amazingly", "awfully", "completely", "considerably",
+    "decidedly", "deeply", "effing", "enormously", "entirely", "especially",
+    "exceptionally", "extremely", "fabulously", "flipping", "flippin",
+    "fricking", "frickin", "frigging", "friggin", "fully", "fucking", "fuckin",
+    "greatly", "hella", "highly", "hugely", "incredibly", "intensely",
+    "majorly", "more", "most", "particularly", "purely", "quite", "really",
+    "remarkably", "so", "substantially", "thoroughly", "totally",
+    "tremendously", "uber", "unbelievably", "unusually", "utterly", "very",
 )
 
 var negatives = Bag(
