@@ -2,15 +2,8 @@ package main
 
 import (
     "fmt"
-    "math"
     "github.com/kavorite/vader"
 )
-
-func prettify(P *vader.PolarityScores) {
-    for _, p := range []*float64{&P.Positive, &P.Negative, &P.Neutral, &P.Compound} {
-        *p = math.Round(*p * 100) / 100
-    }
-}
 
 func main() {
     sentences := [...]string {
@@ -41,8 +34,6 @@ func main() {
 
     for _, sentence := range sentences {
         fmt.Println(sentence)
-        P := vader.ParseText(sentence).PolarityScores()
-        prettify(&P)
-        fmt.Printf("%+v\n", P)
+        fmt.Printf("%+v\n", vader.ParseText(sentence).PolarityScores())
     }
 }

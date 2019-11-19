@@ -380,10 +380,10 @@ func getTotalSentiment(sentiments []float64, punctAmp float64) PolarityScores {
     total := positive + math.Abs(negative) + float64(neutralc)
 
     return PolarityScores{
-        Positive: positive / total,
-        Negative: math.Abs(negative / total),
-        Neutral:  float64(neutralc) / total,
-        Compound: normalizeScore(sigma),
+        Positive: math.Round(100 * positive / total) / 100,
+        Negative: math.Round(100 * math.Abs(negative / total)) / 100,
+        Neutral:  math.Round(100 * float64(neutralc) / total) / 100,
+        Compound: math.Round(100 * normalizeScore(sigma)) / 100,
     }
 }
 
