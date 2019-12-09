@@ -3,7 +3,32 @@ package vader
 import (
     "math"
     "strings"
+    "unicode"
+
+    "golang.org/x/text/transform"
+    "golang.org/x/text/unicode/norm"
 )
+
+func strip(src string) string {
+    strip := func(r rune) bool {
+        return unicode.Is(unicode.Mn, r)
+    }
+    t := transform.Chain(norm.NFD, transform.RemoveFunc(strip), norm.NFC)
+    stripped, _, _ := transform.String(t, src)
+    return stripped
+}
+
+func tokenize(src string) (T []string) {
+    D := strings.Fields(strip(src))
+    T = make([]string, len(D), len(D))
+    for i, t := range D {
+        if len(t) == 1 {
+            continue
+        }
+        T[i] = strings.Trim(t, punctuation)
+    }
+    return
+}
 
 const (
     // positive term valence
@@ -98,19 +123,6 @@ func boost(t string) float64 {
         return boostDecr
     }
     return 0
-}
-
-func tokenize(src string) (T []string) {
-    D := strings.Fields(src)
-    T = make([]string, 0, len(D))
-    for _, t := range D {
-        if len(t) == 1 {
-            continue
-        }
-        t = strings.Trim(t, punctuation)
-        T = append(T, t)
-    }
-    return
 }
 
 func appendEmojiDescs(src string) string {
@@ -223,10 +235,10 @@ func negationCheck(valence float64, ltokens []string, j, i int) float64 {
         } else if negatesp(ltokens[i-j-1]) {
             valence *= negationCoeff
         }
-    case 3:
-        if ltokens[i-3] == "never" && Bag("so", "this").ContainsAny(ltokens[i-2:]...) {
+    case 2:
+        if ltokens[i-3] == "never" && Bag("so", "this").ContainsAny(ltokens[i-2:i+1]...) {
             valence *= 1.25
-        } else if ltokens[i-3] == "without" && Bag(ltokens[i-2:]...).Has("doubt") {
+        } else if ltokens[i-3] == "without" && Bag(ltokens[i-2:i+1]...).Has("doubt") {
             valence *= 1.0
         } else if negatesp(ltokens[i-j-1]) {
             valence *= negationCoeff
@@ -315,7 +327,7 @@ func (D Doc) Valence(i int) (valence float64) {
         }
     }
 
-    for j := 0; j < 3; j++ {
+    for j := 0; j < 2; j++ {
         if i > j && !lexicon.Has(D.ltokens[i-j-1]) {
             s := scalarIncDec(D.tokens[i-j-1], valence, D.mixedCaps)
             switch j {
@@ -388,14 +400,14 @@ func getTotalSentiment(sentiments []float64, punctAmp float64) PolarityScores {
 }
 
 func (D Doc) PolarityScores() PolarityScores {
-    sentiments := make([]float64, 0, len(D.ltokens))
+    sentiments := make([]float64, len(D.ltokens), len(D.ltokens))
     for i, t := range D.ltokens {
         if boost(t) != 0 {
-            sentiments = append(sentiments, 0)
+            sentiments[i] = 0
         } else if i < len(D.ltokens)-1 && t == "kind" && D.ltokens[i+1] == "of" {
-            sentiments = append(sentiments, 0)
+            sentiments[i] = 0
         } else {
-            sentiments = append(sentiments, D.Valence(i))
+            sentiments[i] = D.Valence(i)
         }
     }
     butCheck(D.ltokens, sentiments)
