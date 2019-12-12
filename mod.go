@@ -320,7 +320,7 @@ func (D Doc) sentimentValence(i int) (valence float64) {
 
     if D.mixedCaps &&
     len(D.tokens[i]) > 1 &&
-    strings.ToUpper(D.ltokens[i]) == D.ltokens[i] {
+    strings.ToUpper(D.tokens[i]) == D.tokens[i] {
         if valence > 0 {
             valence += capsIncr
         } else {
