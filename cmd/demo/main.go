@@ -34,6 +34,6 @@ func main() {
 
     for _, sentence := range sentences {
         fmt.Println(sentence)
-        fmt.Printf("%+v\n", vader.ParseText(sentence).PolarityScores())
+        fmt.Printf("%+v\n", vader.ParseText(sentence).PolarityScores().Rounded(2))
     }
 }

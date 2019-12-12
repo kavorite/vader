@@ -203,6 +203,18 @@ type PolarityScores struct {
     Positive, Negative, Neutral, Compound float64
 }
 
+// Rounded rounds the fields in P to the given significant figures and returns
+// a new container with the resulting values.
+func (P PolarityScores) Rounded(sigfigs int) PolarityScores {
+    exp := math.Pow(10.0, float64(sigfigs))
+    return PolarityScores{
+        Positive: math.Round(P.Positive*exp) / exp,
+        Negative: math.Round(P.Negative*exp) / exp,
+        Neutral:  math.Round(P.Neutral*exp) / exp,
+        Compound: math.Round(P.Compound*exp) / exp,
+    }
+}
+
 func negatesp(t string) bool {
     t = strings.ToLower(t)
     if _, ok := negations[t]; ok {
@@ -396,10 +408,10 @@ func getTotalSentiment(sentiments []float64, punctAmp float64) PolarityScores {
     total := positive + math.Abs(negative) + float64(neutralc)
 
     return PolarityScores{
-        Positive: math.Round(100 * positive / total) / 100,
-        Negative: math.Round(100 * negative / total) / 100,
-        Neutral:  math.Round(100 * float64(neutralc) / total) / 100,
-        Compound: math.Round(100 * normalizeScore(sigma)) / 100,
+        Positive: positive / total,
+        Negative: negative / total,
+        Neutral:  float64(neutralc) / total,
+        Compound: normalizeScore(sigma),
     }
 }
 
