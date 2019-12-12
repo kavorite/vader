@@ -54,6 +54,7 @@ const (
     punctuation = "[!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~]"
 )
 
+// BOW is a bag of words represented as a string hash-set.
 type BOW map[string]struct{}
 
 func Bag(words ...string) (bag BOW) {
@@ -64,11 +65,13 @@ func Bag(words ...string) (bag BOW) {
     return
 }
 
+// Has returns whether bag contains t.
 func (bag BOW) Has(t string) bool {
     _, ok := bag[t]
     return ok
 }
 
+// ContainsAny returns whether any of the arguments are in bag.
 func (bag BOW) ContainsAny(of ...string) bool {
     for _, t := range of {
         if bag.Has(t) {
@@ -139,6 +142,7 @@ func appendEmojiDescs(src string) string {
     return B.String()
 }
 
+// Doc is a parsed document.
 type Doc struct {
     tokens    []string
     ltokens   []string
@@ -146,6 +150,8 @@ type Doc struct {
     punctAmp  float64
 }
 
+// ParseText preprocesses the given document with some cleaning code, tokenizes
+// it, persists some meta-data about it and preps it for analysis as a Doc.
 func ParseText(raw string) (D Doc) {
     src := appendEmojiDescs(raw)
     D.tokens = tokenize(src)
@@ -397,6 +403,8 @@ func getTotalSentiment(sentiments []float64, punctAmp float64) PolarityScores {
     }
 }
 
+// PolarityScores returns the polarity scores resulting from an analysis of the
+// document's component valence.
 func (D Doc) PolarityScores() PolarityScores {
     sentiments := make([]float64, len(D.ltokens))
     for i, t := range D.ltokens {
