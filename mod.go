@@ -146,11 +146,10 @@ type Doc struct {
     punctAmp  float64
 }
 
-func ParseText(src string) (D Doc) {
-    raw := appendEmojiDescs(src)
-    D.tokens = tokenize(raw)
-    D.ltokens = tokenize(strings.ToLower(raw))
-
+func ParseText(raw string) (D Doc) {
+    src := appendEmojiDescs(raw)
+    D.tokens = tokenize(src)
+    D.ltokens = make([]string, len(D.tokens))
     var (
         hasCaps    = false
         hasNonCaps = false
@@ -158,7 +157,8 @@ func ParseText(src string) (D Doc) {
         bangc      = 0
     )
 
-    for _, t := range D.tokens {
+    for i, t := range D.tokens {
+        D.ltokens[i] = strings.ToLower(t)
         if strings.ToUpper(t) == t {
             hasCaps = true
             if hasNonCaps {
@@ -172,7 +172,7 @@ func ParseText(src string) (D Doc) {
         }
     }
 
-    for _, c := range raw {
+    for _, c := range src {
         switch c {
         case '!':
             bangc++
@@ -199,8 +199,10 @@ type PolarityScores struct {
 
 func negatesp(t string) bool {
     t = strings.ToLower(t)
-    _, ok := negations[t]
-    return ok || strings.Contains(t, "n't")
+    if _, ok := negations[t]; ok {
+        return true
+    }
+    return strings.Contains(t, "n't")
 }
 
 func scalarIncDec(t string, valence float64, mixedCaps bool) (s float64) {
@@ -224,23 +226,23 @@ func scalarIncDec(t string, valence float64, mixedCaps bool) (s float64) {
 func negationCheck(valence float64, ltokens []string, j, i int) float64 {
     switch j {
     case 0:
-        if negatesp(ltokens[i-j-1]) {
+        if negatesp(ltokens[i-1]) {
             valence *= negationCoeff
         }
     case 1:
         if ltokens[i-2] == "never" && Bag("so", "this").Has(ltokens[i-1]) {
             valence *= 1.25
         } else if ltokens[i-2] == "without" && ltokens[i-1] == "doubt" {
-            valence *= 1.0
-        } else if negatesp(ltokens[i-j-1]) {
+            break
+        } else if negatesp(ltokens[i-2]) {
             valence *= negationCoeff
         }
     case 2:
-        if ltokens[i-3] == "never" && Bag("so", "this").ContainsAny(ltokens[i-2:i+1]...) {
+        if ltokens[i-3] == "never" && Bag("so", "this").ContainsAny(ltokens[i-2:i]...) {
             valence *= 1.25
-        } else if ltokens[i-3] == "without" && Bag(ltokens[i-2:i+1]...).Has("doubt") {
+        } else if ltokens[i-3] == "without" && Bag(ltokens[i-2:i]...).Has("doubt") {
             valence *= 1.0
-        } else if negatesp(ltokens[i-j-1]) {
+        } else if negatesp(ltokens[i-3]) {
             valence *= negationCoeff
         }
     }
@@ -300,15 +302,12 @@ func leastCheck(valence float64, ltokens []string, i int) float64 {
     return valence
 }
 
-func (D Doc) Valence(i int) (valence float64) {
-    t := D.tokens[i]
-    l := D.ltokens[i]
-    valence = lexicon.Valence(l)
+func (D Doc) sentimentValence(i int) (valence float64) {
+    valence = lexicon.Valence(D.ltokens[i])
     if valence == 0 {
         return
     }
-
-    if l == "no" && lexicon.Valence(D.ltokens[i+1]) != 0 {
+    if D.ltokens[i] == "no" && lexicon.Has(D.ltokens[i+1]) {
         valence = 0
     }
 
@@ -319,7 +318,9 @@ func (D Doc) Valence(i int) (valence float64) {
         valence *= negationCoeff
     }
 
-    if len(t) > 1 && D.mixedCaps && strings.ToUpper(t) == t {
+    if D.mixedCaps &&
+    len(D.tokens[i]) > 1 &&
+    strings.ToUpper(D.ltokens[i]) == D.ltokens[i] {
         if valence > 0 {
             valence += capsIncr
         } else {
@@ -327,15 +328,10 @@ func (D Doc) Valence(i int) (valence float64) {
         }
     }
 
-    for j := 0; j < 2; j++ {
+    for j := 0; j < 3; j++ {
         if i > j && !lexicon.Has(D.ltokens[i-j-1]) {
             s := scalarIncDec(D.tokens[i-j-1], valence, D.mixedCaps)
-            switch j {
-            case 1:
-                s *= 0.95
-            case 2:
-                s *= 0.9
-            }
+            s *= 1.0 - 0.05*float64(j)
             valence += s
             valence = negationCheck(valence, D.ltokens, j, i)
             if j == 2 {
@@ -376,9 +372,11 @@ func getTotalSentiment(sentiments []float64, punctAmp float64) PolarityScores {
     for _, x := range sentiments {
         if x > 0 {
             positive += x + 1
-        } else if x < 0 {
+        }
+        if x < 0 {
             negative += x - 1
-        } else {
+        }
+        if x == 0 {
             neutralc++
         }
     }
@@ -393,21 +391,22 @@ func getTotalSentiment(sentiments []float64, punctAmp float64) PolarityScores {
 
     return PolarityScores{
         Positive: math.Round(100 * positive / total) / 100,
-        Negative: math.Round(100 * math.Abs(negative / total)) / 100,
+        Negative: math.Round(100 * negative / total) / 100,
         Neutral:  math.Round(100 * float64(neutralc) / total) / 100,
         Compound: math.Round(100 * normalizeScore(sigma)) / 100,
     }
 }
 
 func (D Doc) PolarityScores() PolarityScores {
-    sentiments := make([]float64, len(D.ltokens), len(D.ltokens))
+    sentiments := make([]float64, len(D.ltokens))
     for i, t := range D.ltokens {
         if boost(t) != 0 {
-            sentiments[i] = 0
-        } else if i < len(D.ltokens)-1 && t == "kind" && D.ltokens[i+1] == "of" {
-            sentiments[i] = 0
+            continue
+        } else if i < len(D.ltokens)-1 &&
+        t == "kind" && D.ltokens[i+1] == "of" {
+            continue
         } else {
-            sentiments[i] = D.Valence(i)
+            sentiments[i] = D.sentimentValence(i)
         }
     }
     butCheck(D.ltokens, sentiments)
